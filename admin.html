@@ -36,7 +36,8 @@
   .who{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
 
   section{margin-bottom:40px;}
-  section h2{font-family:'Space Grotesk',sans-serif;font-size:18px;margin:0 0 14px;}
+  section h2{font-family:'Space Grotesk',sans-serif;font-size:18px;margin:0;}
+  .sectionhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
   .tablewrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-x:auto;}
   table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
   thead th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);padding:10px;border-bottom:1px solid var(--line);}
@@ -73,12 +74,18 @@
     </div>
 
     <section>
-      <h2>Activity Log</h2>
+      <div class="sectionhead">
+        <h2>Activity Log</h2>
+        <button class="rowbtn secondary" id="exportActivityBtn" style="width:auto;margin:0;">Export CSV</button>
+      </div>
       <div class="tablewrap"><div id="activityWrap"></div></div>
     </section>
 
     <section>
-      <h2>Submitted Apps</h2>
+      <div class="sectionhead">
+        <h2>Submitted Apps</h2>
+        <button class="rowbtn secondary" id="exportAppsBtn" style="width:auto;margin:0;">Export CSV</button>
+      </div>
       <div class="tablewrap"><div id="appsWrap"></div></div>
     </section>
   </div>
@@ -101,6 +108,41 @@ function escapeHtml(s){
 function sessionOptions(selected){
   return SESSIONS.map(s => `<option value="${escapeHtml(s)}" ${s===selected?'selected':''}>${escapeHtml(s)}</option>`).join('');
 }
+
+let activityData = [];
+let appsData = [];
+
+function downloadCsv(filename, columns, rows){
+  const escapeCsv = v => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = [columns.map(c => escapeCsv(c.label)).join(',')];
+  rows.forEach(r => lines.push(columns.map(c => escapeCsv(r[c.key])).join(',')));
+  const blob = new Blob([lines.join('\n')], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('exportActivityBtn').addEventListener('click', () => {
+  downloadCsv('lumberton-lockin-activity-log.csv', [
+    {key:'agent', label:'Agent'}, {key:'session', label:'Session'},
+    {key:'dials', label:'Dials'}, {key:'contacts', label:'Contacts'},
+    {key:'appts', label:'Appts'}, {key:'created_at', label:'Created At'}
+  ], activityData);
+});
+
+document.getElementById('exportAppsBtn').addEventListener('click', () => {
+  downloadCsv('lumberton-lockin-submitted-apps.csv', [
+    {key:'agent', label:'Agent'}, {key:'session', label:'Session'},
+    {key:'carrier', label:'Carrier'}, {key:'apv', label:'APV'},
+    {key:'apps', label:'Apps'}, {key:'created_at', label:'Created At'}
+  ], appsData);
+});
 
 // ---------------- Auth ----------------
 document.getElementById('loginBtn').addEventListener('click', async () => {
@@ -145,6 +187,7 @@ async function loadActivity(){
   const { data, error } = await sb.from('activity_log').select('*').order('created_at', {ascending:false});
   const wrap = document.getElementById('activityWrap');
   if(error){ wrap.innerHTML = `<div class="empty">Error loading: ${escapeHtml(error.message)}</div>`; return; }
+  activityData = data || [];
   if(!data || data.length===0){ wrap.innerHTML = '<div class="empty">No entries yet.</div>'; return; }
 
   let html = '<table><thead><tr><th>Agent</th><th>Session</th><th>Dials</th><th>Contacts</th><th>Appts</th><th></th></tr></thead><tbody>';
@@ -192,6 +235,7 @@ async function loadApps(){
   const { data, error } = await sb.from('apps_log').select('*').order('created_at', {ascending:false});
   const wrap = document.getElementById('appsWrap');
   if(error){ wrap.innerHTML = `<div class="empty">Error loading: ${escapeHtml(error.message)}</div>`; return; }
+  appsData = data || [];
   if(!data || data.length===0){ wrap.innerHTML = '<div class="empty">No entries yet.</div>'; return; }
 
   let html = '<table><thead><tr><th>Agent</th><th>Session</th><th>Carrier</th><th>APV</th><th>Apps</th><th></th></tr></thead><tbody>';
