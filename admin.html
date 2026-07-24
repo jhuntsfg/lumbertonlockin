@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumberton Lock In — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0a0e14;--panel:#10161f;--panel-2:#161d29;--line:#232c3a;
+    --text:#e8edf2;--muted:#7c8798;--green:#00e5a0;--amber:#ffb020;--danger:#ff5d5d;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;padding:28px 18px 60px;}
+  .wrap{max-width:1000px;margin:0 auto;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--amber);margin:0 0 6px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:28px;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 28px;}
+
+  .login-box{max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;margin-top:40px;}
+  .login-box h2{font-family:'Space Grotesk',sans-serif;font-size:17px;margin:0 0 16px;}
+  label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px;}
+  label:first-of-type{margin-top:0;}
+  input{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;}
+  input:focus{border-color:var(--amber);}
+  button{margin-top:16px;width:100%;background:var(--amber);color:#241902;border:none;border-radius:8px;padding:11px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;cursor:pointer;}
+  button:disabled{opacity:.5;}
+  button.secondary{background:transparent;border:1px solid var(--line);color:var(--muted);margin-top:8px;}
+  .msg{margin-top:10px;font-size:12.5px;color:var(--muted);min-height:16px;}
+  .msg.err{color:var(--danger);}
+  .msg.ok{color:var(--green);}
+
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
+  .who{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+
+  section{margin-bottom:40px;}
+  section h2{font-family:'Space Grotesk',sans-serif;font-size:18px;margin:0 0 14px;}
+  .tablewrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
+  thead th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);padding:10px;border-bottom:1px solid var(--line);}
+  tbody td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody input,tbody select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12.5px;width:100%;}
+  .rowbtn{padding:6px 10px;font-size:12px;margin:0;width:auto;display:inline-block;}
+  .save{background:var(--green);color:#04140f;}
+  .del{background:var(--danger);color:#2a0505;margin-left:6px;}
+  .empty{color:var(--muted);font-size:13px;padding:20px;text-align:center;}
+  #app{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">Hunt Master Agency</p>
+  <h1>Lumberton Lock In — Admin</h1>
+  <p class="sub">Edit or delete tracker entries. This page requires sign-in — it isn't linked from the public event page.</p>
+
+  <div class="login-box" id="loginBox">
+    <h2>Sign in</h2>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username">
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <button id="loginBtn">Sign in</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <div id="app">
+    <div class="topbar">
+      <span class="who" id="whoAmI"></span>
+      <button class="secondary" id="logoutBtn" style="width:auto;margin:0;">Log out</button>
+    </div>
+
+    <section>
+      <h2>Activity Log</h2>
+      <div class="tablewrap"><div id="activityWrap"></div></div>
+    </section>
+
+    <section>
+      <h2>Submitted Apps</h2>
+      <div class="tablewrap"><div id="appsWrap"></div></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://lriafijkbaulnwmbjyxg.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxyaWFmaWprYmF1bG53bWJqeXhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MDg4MjUsImV4cCI6MjEwMDQ4NDgyNX0.GD5B9vM1iLh_Ri_PFdg_HmzDgSMlOUbwc9NWxsMPj1E';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const SESSIONS = [
+  'Jul 30, 10:00am–12:00pm EST','Jul 30, 12:30–2:30pm EST','Jul 30, 3:00–5:00pm EST',
+  'Jul 30, 5:30–7:30pm EST','Jul 30, 8:00–10:00pm EST','Jul 31, 10:00am–12:00pm EST',
+  'Jul 31, 12:30–2:30pm EST','Jul 31, 3:00–5:00pm EST','Jul 31, 5:30–7:30pm EST','Jul 31, 8:00–10:00pm EST'
+];
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function sessionOptions(selected){
+  return SESSIONS.map(s => `<option value="${escapeHtml(s)}" ${s===selected?'selected':''}>${escapeHtml(s)}</option>`).join('');
+}
+
+// ---------------- Auth ----------------
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('loginBtn');
+  const msg = document.getElementById('loginMsg');
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('pw').value;
+  btn.disabled = true;
+  msg.textContent = 'Signing in...';
+  msg.className = 'msg';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){
+    msg.textContent = error.message;
+    msg.className = 'msg err';
+    btn.disabled = false;
+    return;
+  }
+  await enterApp(data.user);
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginBox').style.display = 'block';
+});
+
+async function enterApp(user){
+  document.getElementById('loginBox').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('whoAmI').textContent = 'Signed in as ' + user.email;
+  await loadActivity();
+  await loadApps();
+}
+
+// Restore session on reload
+sb.auth.getSession().then(({ data }) => {
+  if(data.session){ enterApp(data.session.user); }
+});
+
+// ---------------- Activity table ----------------
+async function loadActivity(){
+  const { data, error } = await sb.from('activity_log').select('*').order('created_at', {ascending:false});
+  const wrap = document.getElementById('activityWrap');
+  if(error){ wrap.innerHTML = `<div class="empty">Error loading: ${escapeHtml(error.message)}</div>`; return; }
+  if(!data || data.length===0){ wrap.innerHTML = '<div class="empty">No entries yet.</div>'; return; }
+
+  let html = '<table><thead><tr><th>Agent</th><th>Session</th><th>Dials</th><th>Contacts</th><th>Appts</th><th></th></tr></thead><tbody>';
+  data.forEach(r => {
+    html += `<tr data-id="${r.id}">
+      <td><input value="${escapeHtml(r.agent)}" data-field="agent"></td>
+      <td><select data-field="session">${sessionOptions(r.session)}</select></td>
+      <td><input type="number" value="${r.dials}" data-field="dials" style="width:70px;"></td>
+      <td><input type="number" value="${r.contacts}" data-field="contacts" style="width:70px;"></td>
+      <td><input type="number" value="${r.appts}" data-field="appts" style="width:70px;"></td>
+      <td><button class="rowbtn save" data-action="save-activity">Save</button><button class="rowbtn del" data-action="del-activity">Delete</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+document.getElementById('activityWrap').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  const tr = btn.closest('tr');
+  const id = tr.getAttribute('data-id');
+
+  if(btn.dataset.action === 'save-activity'){
+    const agent = tr.querySelector('[data-field="agent"]').value.trim();
+    const session = tr.querySelector('[data-field="session"]').value;
+    const dials = parseInt(tr.querySelector('[data-field="dials"]').value) || 0;
+    const contacts = parseInt(tr.querySelector('[data-field="contacts"]').value) || 0;
+    const appts = parseInt(tr.querySelector('[data-field="appts"]').value) || 0;
+    btn.disabled = true;
+    const { error } = await sb.from('activity_log').update({agent, session, dials, contacts, appts}).eq('id', id);
+    btn.disabled = false;
+    if(error) alert('Could not save: ' + error.message);
+  }
+  if(btn.dataset.action === 'del-activity'){
+    if(!confirm('Delete this entry?')) return;
+    const { error } = await sb.from('activity_log').delete().eq('id', id);
+    if(error){ alert('Could not delete: ' + error.message); return; }
+    await loadActivity();
+  }
+});
+
+// ---------------- Apps table ----------------
+async function loadApps(){
+  const { data, error } = await sb.from('apps_log').select('*').order('created_at', {ascending:false});
+  const wrap = document.getElementById('appsWrap');
+  if(error){ wrap.innerHTML = `<div class="empty">Error loading: ${escapeHtml(error.message)}</div>`; return; }
+  if(!data || data.length===0){ wrap.innerHTML = '<div class="empty">No entries yet.</div>'; return; }
+
+  let html = '<table><thead><tr><th>Agent</th><th>Session</th><th>Carrier</th><th>APV</th><th>Apps</th><th></th></tr></thead><tbody>';
+  data.forEach(r => {
+    html += `<tr data-id="${r.id}">
+      <td><input value="${escapeHtml(r.agent)}" data-field="agent"></td>
+      <td><select data-field="session">${sessionOptions(r.session)}</select></td>
+      <td><input value="${escapeHtml(r.carrier)}" data-field="carrier"></td>
+      <td><input type="number" value="${r.apv}" data-field="apv" style="width:90px;"></td>
+      <td><input type="number" value="${r.apps}" data-field="apps" style="width:60px;"></td>
+      <td><button class="rowbtn save" data-action="save-apps">Save</button><button class="rowbtn del" data-action="del-apps">Delete</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+document.getElementById('appsWrap').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  const tr = btn.closest('tr');
+  const id = tr.getAttribute('data-id');
+
+  if(btn.dataset.action === 'save-apps'){
+    const agent = tr.querySelector('[data-field="agent"]').value.trim();
+    const session = tr.querySelector('[data-field="session"]').value;
+    const carrier = tr.querySelector('[data-field="carrier"]').value.trim();
+    const apv = parseFloat(tr.querySelector('[data-field="apv"]').value) || 0;
+    const apps = parseInt(tr.querySelector('[data-field="apps"]').value) || 1;
+    btn.disabled = true;
+    const { error } = await sb.from('apps_log').update({agent, session, carrier, apv, apps}).eq('id', id);
+    btn.disabled = false;
+    if(error) alert('Could not save: ' + error.message);
+  }
+  if(btn.dataset.action === 'del-apps'){
+    if(!confirm('Delete this entry?')) return;
+    const { error } = await sb.from('apps_log').delete().eq('id', id);
+    if(error){ alert('Could not delete: ' + error.message); return; }
+    await loadApps();
+  }
+});
+</script>
+</body>
+</html>
