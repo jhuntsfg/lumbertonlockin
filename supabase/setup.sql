@@ -57,6 +57,11 @@ create policy "Public can read activity"
   to anon
   using (true);
 
+create policy "Authenticated can read activity"
+  on activity_log for select
+  to authenticated
+  using (true);
+
 create policy "Authenticated can update activity"
   on activity_log for update
   to authenticated
@@ -76,6 +81,11 @@ create policy "Public can insert apps"
 create policy "Public can read apps"
   on apps_log for select
   to anon
+  using (true);
+
+create policy "Authenticated can read apps"
+  on apps_log for select
+  to authenticated
   using (true);
 
 create policy "Authenticated can update apps"
