@@ -1,16 +1,15 @@
 # Lumberton Lock In — Event Tracker Site
 
 Static, no-login-required event site for Hunt Agency's Lumberton Lock In
-(July 30–31, plus a Saturday, August 1st in-person training). Built for
-agents to log activity during dial sessions and track submitted apps live,
-with a separate password-protected admin page for corrections.
+(November 16–17). Built for agents to log activity during dial sessions
+and track submitted apps live, with a separate password-protected admin
+page for corrections.
 
 ## Files
 
 - **index.html** — the public page. Header with event details, two live
-  trackers (Activity + Submitted Apps), a link out to the dial schedule
-  (Google Sheet), and a footer for the Saturday training with the flyer
-  embedded as image data.
+  trackers (Activity + Submitted Apps), and a link out to the dial
+  schedule (Google Sheet).
 - **admin.html** — private page for editing/deleting tracker entries.
   Requires signing in with a Supabase Auth user (see setup below). Not
   linked from the public page — access it directly at `/admin.html`.
@@ -48,10 +47,10 @@ filters) are hardcoded as `<option>` lists in index.html and as the
 `SESSIONS` array in admin.html — if the session times change, update both
 places.
 
-The footer flyer and header logo are embedded directly as base64 image
-data inside index.html (not separate files) so they never break when
-deployed — if you need to swap either image, ask Claude Code to
-re-embed a new image file the same way.
+The header logo is embedded directly as base64 image data inside
+index.html (not a separate file) so it never breaks when deployed — if
+you need to swap it, ask Claude Code to re-embed a new image file the
+same way.
 
 ## Deploying with GitHub + Vercel (auto-deploy on push)
 
