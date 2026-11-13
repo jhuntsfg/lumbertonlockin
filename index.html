@@ -103,6 +103,26 @@
     transition:background .15s,color .15s;
   }
   .schedule-btn:hover{background:var(--green);color:#FBF9F3;}
+  .goal-therm{margin-top:24px;max-width:480px;}
+  .goal-therm-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:12px;}
+  .goal-therm-label{
+    font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.12em;
+    text-transform:uppercase;font-weight:600;color:var(--muted);
+  }
+  .goal-therm-value{
+    font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;
+    color:var(--text);white-space:nowrap;
+  }
+  .goal-therm-track{
+    width:100%;height:14px;border-radius:8px;
+    background:var(--panel-2);border:1px solid var(--line);overflow:hidden;
+  }
+  .goal-therm-fill{
+    height:100%;border-radius:8px;
+    background:linear-gradient(90deg, var(--green-dim), var(--green));
+    width:0%;transition:width .6s ease;
+  }
+  .goal-therm-fill.goal-met{background:linear-gradient(90deg, var(--amber-dim), var(--amber));}
 
   /* ---------- Section shell ---------- */
   section.tracker{padding:46px 0;border-bottom:1px solid var(--line);}
@@ -219,6 +239,15 @@
       <div class="meta-item">
         <span class="meta-label">Zoom Link</span>
         <span class="meta-value"><a href="https://us02web.zoom.us/j/86730619532?pwd=1ZNYkNcbSRXzshau7bfamFHeATaHEp.1#success" target="_blank" rel="noopener">Join Zoom</a> · Passcode: lockin</span>
+      </div>
+    </div>
+    <div class="goal-therm">
+      <div class="goal-therm-head">
+        <span class="goal-therm-label">APV Goal</span>
+        <span class="goal-therm-value" id="goalApvValue">$0 / $120,000</span>
+      </div>
+      <div class="goal-therm-track">
+        <div class="goal-therm-fill" id="goalApvFill" style="width:0%"></div>
       </div>
     </div>
     <a class="schedule-btn" href="https://docs.google.com/spreadsheets/d/1D_52jgGZB65okTJuho7yBrtIsf-1fiI68_0rjBR9mUA/edit?usp=drive_link" target="_blank" rel="noopener">View dial schedule →</a>
@@ -393,6 +422,17 @@ const sb = (SUPABASE_URL.startsWith('http'))
 
 function fmtNum(n){ return (n||0).toLocaleString(); }
 function fmtUsd(n){ return '$' + Math.round(n||0).toLocaleString(); }
+
+const APV_GOAL = 120000;
+function updateGoalTherm(apv){
+  const fill = document.getElementById('goalApvFill');
+  const value = document.getElementById('goalApvValue');
+  if(!fill || !value) return;
+  const pct = Math.max(0, Math.min(100, (apv / APV_GOAL) * 100));
+  fill.style.width = pct + '%';
+  fill.classList.toggle('goal-met', apv >= APV_GOAL);
+  value.textContent = fmtUsd(apv) + ' / ' + fmtUsd(APV_GOAL);
+}
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -540,6 +580,7 @@ function pRender(entries){
   if(apvEl.textContent !== fmtUsd(totals.apv)) pulse(apvEl,'pulse-a');
   appsEl.textContent = fmtNum(totals.apps);
   apvEl.textContent = fmtUsd(totals.apv);
+  updateGoalTherm(totals.apv);
   avgEl.textContent = fmtUsd(avg);
 
   const rows = Object.entries(byAgent).map(([name,v])=>({name,...v}))
